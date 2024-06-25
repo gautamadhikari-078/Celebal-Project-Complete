@@ -1,0 +1,86 @@
+{
+    "name": "MainPipeline",
+    "properties": {
+        "activities": [
+            {
+                "name": "LookupCustomerCount",
+                "type": "Lookup",
+                "policy": {
+                    "timeout": "7.00:00:00",
+                    "retry": 3,
+                    "retryIntervalInSeconds": 300
+                },
+                "typeProperties": {
+                    "source": {
+                        "type": "SqlSource",
+                        "sqlReaderQuery": "SELECT COUNT(*) AS CustomerCount FROM CustomerTable"
+                    }
+                }
+            },
+            {
+                "name": "ConditionalCopyToADLS",
+                "type": "IfCondition",
+                "dependsOn": [
+                    {
+                        "activity": "LookupCustomerCount",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "typeProperties": {
+                    "expression": {
+                        "value": "@activity('LookupCustomerCount').output.firstRow.CustomerCount > 500",
+                        "type": "Expression"
+                    },
+                    "ifTrueActivities": [
+                        {
+                            "name": "CopyCustomerDataToADLS",
+                            "type": "Copy",
+                            "inputs": [
+                                {
+                                    "referenceName": "SourceDataset",
+                                    "type": "DatasetReference"
+                                }
+                            ],
+                            "outputs": [
+                                {
+                                    "referenceName": "ADLSDataset",
+                                    "type": "DatasetReference"
+                                }
+                            ],
+                            "typeProperties": {
+                                "source": {
+                                    "type": "SqlSource",
+                                    "sqlReaderQuery": "SELECT * FROM CustomerTable"
+                                },
+                                "sink": {
+                                    "type": "AzureDataLakeStoreSink"
+                                }
+                            }
+                        }
+                    ],
+                    "elseActivities": []
+                }
+            },
+            {
+                "name": "TriggerChildPipeline",
+                "type": "ExecutePipeline",
+                "dependsOn": [
+                    {
+                        "activity": "ConditionalCopyToADLS",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "typeProperties": {
+                    "pipeline": {
+                        "referenceName": "ProductDataPipeline",
+                        "type": "PipelineReference"
+                    }
+                }
+            }
+        ]
+    }
+}

@@ -1,0 +1,75 @@
+{
+    "name": "MainPipeline",
+    "parameters": {
+        "customerCount": {
+            "type": "Int",
+            "defaultValue": 0
+        }
+    },
+    "variables": {
+        "customerCountVariable": {
+            "type": "Int"
+        }
+    },
+    "activities": [
+        {
+            "name": "LookupCustomerCount",
+            "type": "Lookup",
+            "policy": {
+                "timeout": "7.00:00:00",
+                "retry": 3,
+                "retryIntervalInSeconds": 300
+            },
+            "typeProperties": {
+                "source": {
+                    "type": "SqlSource",
+                    "sqlReaderQuery": "SELECT COUNT(*) AS CustomerCount FROM CustomerTable"
+                }
+            },
+            "outputs": [
+                {
+                    "name": "customerCountOutput"
+                }
+            ]
+        },
+        {
+            "name": "SetCustomerCountVariable",
+            "type": "SetVariable",
+            "dependsOn": [
+                {
+                    "activity": "LookupCustomerCount",
+                    "dependencyConditions": [
+                        "Succeeded"
+                    ]
+                }
+            ],
+            "typeProperties": {
+                "variableName": "customerCountVariable",
+                "value": "@activity('LookupCustomerCount').output.firstRow.CustomerCount"
+            }
+        },
+        {
+            "name": "TriggerChildPipeline",
+            "type": "ExecutePipeline",
+            "dependsOn": [
+                {
+                    "activity": "SetCustomerCountVariable",
+                    "dependencyConditions": [
+                        "Succeeded"
+                    ]
+                }
+            ],
+            "typeProperties": {
+                "pipeline": {
+                    "referenceName": "ProductDataPipeline",
+                    "type": "PipelineReference"
+                },
+                "parameters": {
+                    "customerCount": {
+                        "value": "@variables('customerCountVariable')"
+                    }
+                }
+            }
+        }
+    ]
+}

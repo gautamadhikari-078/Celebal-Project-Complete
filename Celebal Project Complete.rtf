@@ -1,0 +1,96 @@
+{\rtf1\ansi\ansicpg1252\deff0\nouicompat\deflang1033{\fonttbl{\f0\fnil\fcharset0 Calibri;}}
+{\colortbl ;\red0\green0\blue255;}
+{\*\generator Riched20 10.0.18362}\viewkind4\uc1 
+\pard\sa200\sl276\slmult1\qc\b\f0\fs52\lang9  Celebal Project\b0\fs22  \par
+\par
+\b\fs24 Genric Continuous data Ingestion from multiple streaming sources into databricks?\par
+\par
+
+\pard\sa200\sl276\slmult1\fs32 1. Create a pipeline to fetch the 5 countries (india,us,uk,china,russia) data from Rest API ({{\field{\*\fldinst{HYPERLINK https://restcountries.com/v3.1/name/\{name\} }}{\fldrslt{https://restcountries.com/v3.1/name/\{name\}\ul0\cf0}}}}\f0\fs32  here replace the \{name\} with Country name like {{\field{\*\fldinst{HYPERLINK https://restcountries.com/v3.1/name/us }}{\fldrslt{https://restcountries.com/v3.1/name/us\ul0\cf0}}}}\f0\fs32 ) and save it in separate file as JSON with File name equal to Country name.\b0\fs22\par
+Sol:\par
+1. Setup Python Environment and Libraries:  pip install requests \par
+2. Create a Python script (fetch_countries_data.py, for example) to fetch data from the API and save it as JSON files.\par
+3. \b Imports: \b0 We import requests for making HTTP requests, json for handling JSON data, and os for file operations.\par
+\b fetch_and_save_country_data Function: \b0 This function takes a country_name parameter, constructs the API URL, makes a GET request to fetch data, and saves the response JSON into a file named after the country.\par
+It assumes the API response returns a list where the first element contains the country data (response.json()[0]). Adjust this based on the actual API response structure.\par
+\b Writes the JSON data to a file using json.dump\b0 .\par
+\b countries List\b0 : Contains the names of the countries for which data needs to be fetched and saved.\par
+\b Main Execution: \b0 Iterates over each country name in the countries list, calls fetch_and_save_country_data function for each country.\par
+4. \b Run the Script\b0\par
+5. After running the script, you should see JSON files (india.json, us.json, etc.) saved in the same directory where the script is executed, each containing the respective country's data fetched from the API.\par
+\par
+\b\fs32 2. Add the trigger to above pipeline in such a way that it will automatically run two times in a day ( 12:00 AM and 12:00 PM IST) \par
+\b0\fs22 Sol:\par
+Edit the Python script to include the scheduling logic. You can use the schedule library in Python for this purpose.\par
+First, install the schedule library: pip install schedule\par
+\b schedule\b0 : Library to schedule tasks at specific times.\par
+fetch_and_save_all_countries: Modified function that iterates over all countries and fetches/saves data.\par
+\b schedule_tasks\b0 : Function that schedules tasks using schedule.every().day.at("time").do(function).\par
+\b Infinite loop\b0 : Runs the scheduler continuously (schedule.run_pending() checks and runs due tasks).\par
+\b Run the script\b0 :\par
+python fetch_countries_data_schedule.py\par
+\b\fs32\par
+3. Create a pipeline to copy customer data from db to adls only if record count is more than 500. Once a data get copy it should call a child pipeline (which will copy the product data from table if customer record count is > 600). \par
+\b0\fs22 Sol:\par
+To create a pipeline that copies customer data from a database to Azure Data Lake Storage (ADLS) only if the record count is more than 500, and then triggers a child pipeline to copy product data if the customer record count is greater than 600, you can follow an approach using Azure Data Factory (ADF) pipelines. Here\rquote s a structured way to achieve this:\par
+\b 1. Main Pipeline (Copy Customer Data)\b0\par
+\b Lookup Activity: \b0 Query the database to get the count of customer records.\par
+\b Conditional Activity: \b0 Based on the count retrieved:\par
+If count > 500:\par
+\b Copy Activity: \b0 Copy customer data from the database to ADLS.\par
+\b Execute Pipeline Activity: \b0 Trigger the child pipeline (Product Data Pipeline) if the count is > 600.\par
+\b\fs32 Implementation Steps:\fs22\par
+Create Linked Services\b0\par
+\b Source Database Linked Service: \b0 Connects to your source database.\par
+\b ADLS Linked Service: \b0 Connects to Azure Data Lake Storage where you want to copy data.\par
+\b Source Dataset: \b0 Represents the customer data in the database.\par
+\b ADLS Dataset\b0 : Represents the target in ADLS where customer data will be copied.\par
+\b Main Pipeline Definition:\b0\par
+Use a Lookup Activity to count the customer records from the database.\par
+Use a Conditional Activity to check the count:\par
+If > 500, use a Copy Activity to copy data to ADLS.\par
+If > 600, use an Execute Pipeline Activity to trigger the child pipeline (Product Data Pipeline).\par
+\b\fs24 2. Child Pipeline (Product Data Pipeline)\par
+\b0\fs22 This pipeline will be triggered by the Main Pipeline if the customer record count is greater than 600. It should include activities to copy product data from your database to ADLS. Ensure you have separate datasets, linked services, and activities defined for this pipeline.\par
+\b\fs28 Example Structure\b0\par
+\b\fs22 Linked Services: \b0 Source Database, ADLS\par
+\b Datasets: \b0 Source Product Dataset, ADLS Dataset for Product Data\par
+\b Activities: \b0 Copy Activity (to copy product data), etc.\par
+\par
+\par
+\b\fs32 4. Design the pipeline in such a manner that it will pass the Customer pipeline pass the customer count to the child product pipeline via Pipeline parameter.\par
+\fs22 Sol:\fs32\par
+\b0\fs22 To design the pipeline such that the customer count is passed from the main pipeline to the child product pipeline via pipeline parameters in Azure Data Factory (ADF), you need to define and use pipeline parameters effectively. Here\rquote s how you can modify the pipeline definitions to achieve this:\par
+\b 1. Main Pipeline (Passing Customer Count)\b0\par
+\b Lookup Activity: \b0 Query the database to get the count of customer records.\par
+
+\pard\sa200\sl276\slmult1\b Set Variable Activity: \b0 Use to store the customer count retrieved from the database.\par
+
+\pard\sa200\sl276\slmult1\b Execute Pipeline Activity: \b0 Trigger the child pipeline (Product Data Pipeline) and pass the customer count as a parameter.\par
+\b\fs28 Implementation Steps:\b0\fs22\par
+\b Define Pipeline Parameters:\b0\par
+Create a parameter in the child pipeline to receive the customer count.\par
+\b Main Pipeline Definition:\b0\par
+
+\pard\sa200\sl276\slmult1 Use a Lookup Activity to count the customer records from the database.\par
+
+\pard\sa200\sl276\slmult1 Use a Set Variable Activity to set the customer count retrieved from the Lookup Activity.\par
+Use an Execute Pipeline Activity to trigger the child pipeline and pass the customer count as a parameter.\b\fs32\par
+\fs24 2. Child Pipeline (Receiving Customer Count)\b0\fs22\par
+\b Define Pipeline Parameters\b0 : Create a parameter to receive the customer count from the main pipeline.\par
+\b Activities: \b0 Use the received parameter in activities as needed (e.g., in SQL queries to filter or process data based on customer count).\par
+\b\fs28 Main Pipeline (MainPipeline.json):\b0\fs22\par
+\b Parameters: \b0 Defines a parameter customerCount which stores the count of customers retrieved from the database.\par
+\b Variables\b0 : Declares a variable customerCountVariable to store the customer count temporarily.\par
+\b LookupCustomerCount\b0 : Retrieves the count of customer records from the database.\par
+\b SetCustomerCountVariable\b0 : Sets the value of customerCountVariable to the customer count retrieved from the LookupCustomerCount activity.\par
+\b TriggerChildPipeline: \b0 Executes the child pipeline (ProductDataPipeline) and passes the customerCountVariable as a parameter.\b\fs28\par
+Child Pipeline (ProductDataPipeline.json):\b0\fs22\par
+\b Parameters: \b0 Declares a parameter customerCount which receives the customer count from the main pipeline.\par
+\b CopyProductDataToADLS: \b0 Uses the customerCount parameter in the SQL query to filter product data based on the customer count condition.\par
+\b\fs28 Usage:\b0\fs22\par
+Update the pipeline activities and SQL queries in the child pipeline (ProductDataPipeline) to utilize the customerCount parameter as needed for your specific data processing requirements.\par
+Ensure that the linked services and datasets referenced in both pipelines (MainPipeline and ProductDataPipeline) are properly configured in your Azure Data Factory instance.\par
+\par
+}
+ 

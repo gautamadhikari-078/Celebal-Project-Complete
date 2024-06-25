@@ -1,0 +1,36 @@
+{
+    "name": "ProductDataPipeline",
+    "parameters": {
+        "customerCount": {
+            "type": "Int",
+            "defaultValue": 0
+        }
+    },
+    "activities": [
+        {
+            "name": "CopyProductDataToADLS",
+            "type": "Copy",
+            "inputs": [
+                {
+                    "referenceName": "SourceProductDataset",
+                    "type": "DatasetReference"
+                }
+            ],
+            "outputs": [
+                {
+                    "referenceName": "ADLSDataset",
+                    "type": "DatasetReference"
+                }
+            ],
+            "typeProperties": {
+                "source": {
+                    "type": "SqlSource",
+                    "sqlReaderQuery": "SELECT * FROM ProductTable WHERE CustomerCount > @pipeline().parameters.customerCount"
+                },
+                "sink": {
+                    "type": "AzureDataLakeStoreSink"
+                }
+            }
+        }
+    ]
+}
